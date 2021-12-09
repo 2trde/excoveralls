@@ -21,7 +21,7 @@
 
 %%
 %% This module implements the Erlang coverage tool.
-%% 
+%%
 %% ARCHITECTURE
 %% The coverage tool consists of one process on each node involved in
 %% coverage analysis. The process is registered as 'cover_server'
@@ -40,15 +40,15 @@
 %%
 %% TABLES
 %% Each nodes has two tables: cover_internal_data_table (?COVER_TABLE) and.
-%% cover_internal_clause_table (?COVER_CLAUSE_TABLE). 
+%% cover_internal_clause_table (?COVER_CLAUSE_TABLE).
 %% ?COVER_TABLE contains the bump data i.e. the data about which lines
 %% have been executed how many times.
 %% ?COVER_CLAUSE_TABLE contains information about which clauses in which modules
 %% cover is currently collecting statistics.
-%% 
+%%
 %% The main node owns tables named
 %% 'cover_collected_remote_data_table' (?COLLECTION_TABLE) and
-%% 'cover_collected_remote_clause_table' (?COLLECTION_CLAUSE_TABLE). 
+%% 'cover_collected_remote_clause_table' (?COLLECTION_CLAUSE_TABLE).
 %% These tables contain data which is collected from remote nodes (either when a
 %% remote node is stopped with cover:stop/1 or when analysing). When
 %% analysing, data is even moved from the COVER tables on the main
@@ -60,15 +60,15 @@
 %% on remote nodes that are started after the compilation.
 %%
 %% PARALLELISM
-%% To take advantage of SMP when doing the cover analysis both the data 
+%% To take advantage of SMP when doing the cover analysis both the data
 %% collection and analysis has been parallelized. One process is spawned for
 %% each node when collecting data, and on the remote node when collecting data
-%% one process is spawned per module. 
-%% 
-%% When analyzing data it is possible to issue multiple analyse(_to_file)/X 
+%% one process is spawned per module.
+%%
+%% When analyzing data it is possible to issue multiple analyse(_to_file)/X
 %% calls at once. They are however all calls (for backwards compatibility
 %% reasons) so the user of cover will have to spawn several processes to to the
-%% calls ( or use async_analyse_to_file ). 
+%% calls ( or use async_analyse_to_file ).
 %%
 
 %% External exports
@@ -114,7 +114,7 @@
 -define(CHUNK_SIZE, 20000).
 
 -record(vars, {module,                      % atom() Module name
-	       
+
 	       init_info=[],                % [{M,F,A,C,L}]
 
 	       function,                    % atom()
@@ -136,8 +136,8 @@
 
 %% Line doesn't matter.
 -define(BLOCK(Expr), {block,erl_anno:new(0),[Expr]}).
--define(BLOCK1(Expr), 
-        if 
+-define(BLOCK1(Expr),
+        if
             element(1, Expr) =:= block ->
                 Expr;
             true -> ?BLOCK(Expr)
@@ -160,16 +160,16 @@ start() ->
     case whereis(?SERVER) of
 	undefined ->
 	    Starter = self(),
-	    Pid = spawn(fun() -> 
+	    Pid = spawn(fun() ->
 				?SPAWN_DBG(start,[]),
-				init_main(Starter) 
+				init_main(Starter)
 			end),
 	    Ref = erlang:monitor(process,Pid),
-	    Return = 
-		receive 
-		    {?SERVER,started} -> 
+	    Return =
+		receive
+		    {?SERVER,started} ->
 			{ok,Pid};
-		    {'DOWN', Ref, _Type, _Object, Info} -> 
+		    {'DOWN', Ref, _Type, _Object, Info} ->
 			{error,Info}
 		end,
 	    erlang:demonitor(Ref),
@@ -443,7 +443,7 @@ analyse_to_file(Module, OutFile, Options) when is_list(OutFile) ->
 analyze_to_file() -> analyse_to_file().
 analyze_to_file(Module) -> analyse_to_file(Module).
 analyze_to_file(Module, OptOrOut) -> analyse_to_file(Module, OptOrOut).
-analyze_to_file(Module, OutFile, Options) -> 
+analyze_to_file(Module, OutFile, Options) ->
     analyse_to_file(Module, OutFile, Options).
 
 async_analyse_to_file(Module) ->
@@ -573,17 +573,17 @@ get_main_node() ->
 
 call(Request) ->
     Ref = erlang:monitor(process,?SERVER),
-    receive {'DOWN', Ref, _Type, _Object, noproc} -> 
+    receive {'DOWN', Ref, _Type, _Object, noproc} ->
 	    erlang:demonitor(Ref),
             {ok,_} = start(),
 	    call(Request)
     after 0 ->
 	    ?SERVER ! {self(),Request},
-	    Return = 
-		receive 
-		    {'DOWN', Ref, _Type, _Object, Info} -> 
+	    Return =
+		receive
+		    {'DOWN', Ref, _Type, _Object, Info} ->
 			exit(Info);
-		    {?SERVER,Reply} -> 
+		    {?SERVER,Reply} ->
 			Reply
 		end,
 	    erlang:demonitor(Ref, [flush]),
@@ -599,25 +599,25 @@ is_from(From) ->
 
 remote_call(Node,Request) ->
     Ref = erlang:monitor(process,{?SERVER,Node}),
-    receive {'DOWN', Ref, _Type, _Object, noproc} -> 
+    receive {'DOWN', Ref, _Type, _Object, noproc} ->
 	    erlang:demonitor(Ref),
 	    {error,node_dead}
     after 0 ->
 	    {?SERVER,Node} ! Request,
-	    Return = 
-		receive 
-		    {'DOWN', Ref, _Type, _Object, _Info} -> 
+	    Return =
+		receive
+		    {'DOWN', Ref, _Type, _Object, _Info} ->
 			case Request of
 			    {remote,stop} -> ok;
 			    _ -> {error,node_dead}
 			end;
-		    {?SERVER,Reply} -> 
+		    {?SERVER,Reply} ->
 			Reply
 		end,
 	    erlang:demonitor(Ref, [flush]),
 	    Return
     end.
-    
+
 remote_reply(Proc,Reply) when is_pid(Proc) ->
     Proc ! {?SERVER,Reply},
     ok;
@@ -632,7 +632,7 @@ remote_reply(MainNode,Reply) ->
 init_main(Starter) ->
     register(?SERVER,self()),
     %% Having write concurrancy here gives a 40% performance boost
-    %% when collect/1 is called. 
+    %% when collect/1 is called.
     ?COVER_TABLE = ets:new(?COVER_TABLE, [set, public, named_table,
                                           {write_concurrency, true}]),
     ?COVER_CLAUSE_TABLE = ets:new(?COVER_CLAUSE_TABLE, [set, public,
@@ -673,7 +673,7 @@ main_process_loop(State) ->
 			  do_export(Module, OutFile, From, State)
 		  end),
 	    main_process_loop(State);
-	
+
 	{From, {import,File}} ->
 	    case file:open(File,[read,binary,raw]) of
 		{ok,Fd} ->
@@ -689,10 +689,10 @@ main_process_loop(State) ->
 
 	{From, modules} ->
 	    %% Get all compiled modules which are still loaded
-	    {LoadedModules,Compiled} = 
+	    {LoadedModules,Compiled} =
 		get_compiled_still_loaded(State#main_state.nodes,
 					  State#main_state.compiled),
-	    
+
 	    reply(From, LoadedModules),
 	    main_process_loop(State#main_state{compiled=Compiled});
 
@@ -715,9 +715,9 @@ main_process_loop(State) ->
 
 	{From, reset} ->
 	    lists:foreach(
-	      fun({Module,_File}) -> 
+	      fun({Module,_File}) ->
 		      do_reset_main_node(Module,State#main_state.nodes)
-	      end, 
+	      end,
 	      State#main_state.compiled),
 	    reply(From, ok),
 	    main_process_loop(State#main_state{imported=[]});
@@ -737,7 +737,7 @@ main_process_loop(State) ->
 
 	{From, stop} ->
 	    lists:foreach(
-	      fun(Node) -> 
+	      fun(Node) ->
 		      remote_call(Node,{remote,stop})
 	      end,
 	      State#main_state.nodes),
@@ -761,12 +761,12 @@ main_process_loop(State) ->
 	    main_process_loop(State);
 
 	{From, {{analyse, Analysis, Level}, Module}} ->
-	    S = try 
+	    S = try
 		    Loaded = is_loaded(Module, State),
 		    spawn(fun() ->
 				  ?SPAWN_DBG(analyse,{Module,Analysis, Level}),
 				  do_parallel_analysis(
-				    Module, Analysis, Level, 
+				    Module, Analysis, Level,
 				    Loaded, From, State)
 			  end),
 		    State
@@ -787,7 +787,7 @@ main_process_loop(State) ->
 	    main_process_loop(State);
 
 	{From, {{analyse_to_file, Opts},Module}} ->
-	    S = try 
+	    S = try
 		    Loaded = is_loaded(Module, State),
 		    spawn_link(fun() ->
 				  ?SPAWN_DBG(analyse_to_file,{Module,Opts}),
@@ -816,7 +816,7 @@ main_process_loop(State) ->
 	    main_process_loop(S);
 
 	{From, {reset, Module}} ->
-	    S = try 
+	    S = try
 		    Loaded = is_loaded(Module,State),
 		    R = case Loaded of
 			    {loaded, _File} ->
@@ -825,7 +825,7 @@ main_process_loop(State) ->
 			    {imported, _File, _} ->
 				do_reset_collection_table(Module)
 			end,
-		    Imported = 
+		    Imported =
 			remove_imported(Module,
 					State#main_state.imported),
 		    reply(From, R),
@@ -834,8 +834,8 @@ main_process_loop(State) ->
 			reply(From,{error, {not_cover_compiled,Module}}),
 			not_loaded(Module, Reason, State)
 		end,
-	    main_process_loop(S);		    
-	
+	    main_process_loop(S);
+
 	{'DOWN', _MRef, process, {?SERVER,Node}, _Info} ->
 	    %% A remote cover_server is down, mark as lost
 	    {Nodes,Lost} =
@@ -862,7 +862,7 @@ main_process_loop(State) ->
 	{nodedown,_} ->
 	    %% Will be taken care of when 'DOWN' message arrives
 	    main_process_loop(State);
-	
+
 	{From, get_main_node} ->
 	    reply(From, node()),
 	    main_process_loop(State);
@@ -890,7 +890,7 @@ init_remote(Starter,MainNode) ->
 
 
 remote_process_loop(State) ->
-    receive 
+    receive
 	{remote,load_compiled,Compiled} ->
 	    Compiled1 = load_compiled(Compiled,State#remote_state.compiled),
 	    remote_reply(State#remote_state.main_node, ok),
@@ -898,7 +898,7 @@ remote_process_loop(State) ->
 
 	{remote,unload,UnloadedModules} ->
 	    unload(UnloadedModules),
-	    Compiled = 
+	    Compiled =
 		update_compiled(UnloadedModules, State#remote_state.compiled),
 	    remote_reply(State#remote_state.main_node, ok),
 	    remote_process_loop(State#remote_state{compiled=Compiled});
@@ -917,7 +917,7 @@ remote_process_loop(State) ->
 			  _ -> Modules0
 		      end,
             spawn(fun() ->
-                          ?SPAWN_DBG(remote_collect, 
+                          ?SPAWN_DBG(remote_collect,
                                      {Modules, CollectorPid, From}),
                           do_collect(Modules, CollectorPid, From)
                   end),
@@ -956,7 +956,7 @@ remote_process_loop(State) ->
 		    ok
 	    end,
 	    remote_process_loop(State)
-	    
+
     end.
 
 do_collect(Modules, CollectorPid, From) ->
@@ -1054,7 +1054,7 @@ insert_initial_data([Item|Items]) ->
     insert_initial_data(Items);
 insert_initial_data([]) ->
     ok.
-    
+
 
 unload([Module|Modules]) ->
     do_clear(Module),
@@ -1104,16 +1104,16 @@ remote_start(MainNode) ->
     case whereis(?SERVER) of
 	undefined ->
 	    Starter = self(),
-	    Pid = spawn(fun() -> 
+	    Pid = spawn(fun() ->
 				?SPAWN_DBG(remote_start,{MainNode}),
-				init_remote(Starter,MainNode) 
+				init_remote(Starter,MainNode)
 			end),
 	    Ref = erlang:monitor(process,Pid),
-	    Return = 
-		receive 
-		    {Pid,started} -> 
+	    Return =
+		receive
+		    {Pid,started} ->
 			{ok,Pid};
-		    {'DOWN', Ref, _Type, _Object, Info} -> 
+		    {'DOWN', Ref, _Type, _Object, Info} ->
 			{error,Info}
 		end,
 	    erlang:demonitor(Ref),
@@ -1148,17 +1148,17 @@ sync_compiled(Node,State) ->
 
 %% Load a set of cover compiled modules on remote nodes,
 %% We do it ?MAX_MODS modules at a time so that we don't
-%% run out of memory on the cover_server node. 
+%% run out of memory on the cover_server node.
 -define(MAX_MODS, 10).
 remote_load_compiled(Nodes,Compiled) ->
     remote_load_compiled(Nodes, Compiled, [], 0).
 remote_load_compiled(_Nodes, [], [], _ModNum) ->
     ok;
-remote_load_compiled(Nodes, Compiled, Acc, ModNum) 
+remote_load_compiled(Nodes, Compiled, Acc, ModNum)
   when Compiled == []; ModNum == ?MAX_MODS ->
     RemoteLoadData = get_downs_r(Acc),
     lists:foreach(
-      fun(Node) -> 
+      fun(Node) ->
 	      remote_call(Node,{remote,load_compiled,RemoteLoadData})
       end,
       Nodes),
@@ -1202,34 +1202,34 @@ get_data_for_remote_loading({Module,File}) ->
 
     {Module,File,Binary,InitialBumps ++ InitialClauses}.
 
-%% Create a match spec which returns the clause info {Module,InitInfo} and 
+%% Create a match spec which returns the clause info {Module,InitInfo} and
 %% all #bump keys for the given module with 0 number of calls.
 ms(Module) ->
-    ets:fun2ms(fun({Key,_}) when Key#bump.module=:=Module -> 
+    ets:fun2ms(fun({Key,_}) when Key#bump.module=:=Module ->
 		       {Key,0}
 	       end).
 
 %% Unload modules on remote nodes
 remote_unload(Nodes,UnloadedModules) ->
     lists:foreach(
-      fun(Node) -> 
+      fun(Node) ->
 	      remote_call(Node,{remote,unload,UnloadedModules})
       end,
-      Nodes).    
+      Nodes).
 
 %% Reset one or all modules on remote nodes
 remote_reset(Module,Nodes) ->
     lists:foreach(
-      fun(Node) -> 
+      fun(Node) ->
 	      remote_call(Node,{remote,reset,Module})
       end,
-      Nodes).        
+      Nodes).
 
 %% Collect data from remote nodes - used for analyse or stop(Node)
 remote_collect(Modules,Nodes,Stop) ->
     _ = pmap(
-          fun(Node) -> 
-                  ?SPAWN_DBG(remote_collect, 
+          fun(Node) ->
+                  ?SPAWN_DBG(remote_collect,
                              {Modules, Nodes, Stop}),
                   do_collection(Node, Modules, Stop)
           end, Nodes),
@@ -1251,7 +1251,7 @@ do_collection(Node, Module, Stop) ->
 %% analysing or when stopping cover on the remote nodes.
 collector_proc() ->
     ?SPAWN_DBG(collector_proc, []),
-    receive 
+    receive
 	{chunk,Chunk,From} ->
 	    insert_in_collection_table(Chunk),
 	    From ! continue,
@@ -1324,16 +1324,10 @@ do_get_all_importfiles([ImportFile|ImportFiles],Acc) ->
 do_get_all_importfiles([],Acc) ->
     Acc.
 
-imported_info(Text,Module,Imported) ->
-    case lists:keysearch(Module,1,Imported) of
-	{value,{Module,_File,ImportFiles}} ->
-	    io:format("~ts includes data from imported files\n~tp\n",
-		      [Text,ImportFiles]);
-	false ->
-	    ok
-    end.
-    
-    
+imported_info(_Text,_Module,_Imported) ->
+  ok.
+
+
 
 add_imported(Module, File, ImportFile, Imported) ->
     add_imported(Module, File, filename:absname(ImportFile), Imported, []).
@@ -1350,7 +1344,7 @@ add_imported(M, F, ImportFile, [H|Imported], Acc) ->
     add_imported(M, F, ImportFile, Imported, [H|Acc]);
 add_imported(M, F, ImportFile, [], Acc) ->
     {ok, lists:reverse([{M, F, [ImportFile]} | Acc])}.
-    
+
 %% Removes a module from the list of imported modules and writes a warning
 %% This is done when a module is compiled.
 remove_imported(Module,Imported) ->
@@ -1442,7 +1436,7 @@ get_compiled_still_loaded(Nodes,Compiled0) ->
 
     %% If some Cover compiled modules have been unloaded, update the database.
     UnloadedModules = CompiledModules--LoadedModules,
-    Compiled = 
+    Compiled =
 	case UnloadedModules of
 	    [] ->
 		Compiled0;
@@ -1506,7 +1500,7 @@ do_compile(Files, Options, State) ->
     remote_load_compiled(State#main_state.nodes,Compiled),
     fix_state_and_result(Result0,State,[]).
 
-do_compile(File, Options) ->    
+do_compile(File, Options) ->
     case do_compile1(File, Options) of
 	{ok, Module} ->
 	    {ok,Module,File};
@@ -1528,11 +1522,11 @@ do_compile1(File, UserOptions) ->
 do_compile_beam1(Module,Beam,UserOptions) ->
     %% Clear database
     do_clear(Module),
-    
+
     %% Extract the abstract format and insert calls to bump/6 at
     %% every executable line and, as a side effect, initiate
     %% the database
-    
+
     case get_abstract_code(Module, Beam) of
 	no_abstract_code=E ->
 	    {error,E};
@@ -1616,7 +1610,7 @@ transform(Code, Module, MainFile) ->
     Vars0 = #vars{module=Module},
     {ok,MungedForms,Vars} = transform_2(Code,[],Vars0,MainFile,on),
     {MungedForms,Vars}.
-    
+
 %% Helpfunction which returns the first found file-attribute, which can
 %% be interpreted as the name of the main erlang source file.
 find_main_filename([{attribute,_,file,{MainFile,_}}|_]) ->
@@ -1651,7 +1645,7 @@ expand({op,_Line,'andalso',ExprL,ExprR}, Vs, N) ->
     {ExpandedExprL,N2} = expand(ExprL, Vs, N),
     {ExpandedExprR,N3} = expand(ExprR, Vs, N2),
     Anno = element(2, ExpandedExprL),
-    {bool_switch(ExpandedExprL, 
+    {bool_switch(ExpandedExprL,
                  ExpandedExprR,
                  {atom,Anno,false},
                  Vs, N3),
@@ -1762,7 +1756,7 @@ munge_clauses([Clause|Clauses], Vars, Lines, MClauses) ->
 			  [{clause,Line,Pattern,MungedGuards,MungedBody}|
 			   MClauses])
     end;
-munge_clauses([], Vars, Lines, MungedClauses) -> 
+munge_clauses([], Vars, Lines, MungedClauses) ->
     {lists:reverse(MungedClauses), Vars#vars{lines = Lines}}.
 
 munge_body(Expr, Vars) ->
@@ -1778,7 +1772,7 @@ munge_body([Expr|Body], Vars, MungedBody, LastExprBumpLines) ->
             NewBumps = new_bumps(Vars2, Vars),
             NoBumpLines = [Line|Vars#vars.no_bump_lines],
             Vars3 = Vars2#vars{no_bump_lines = NoBumpLines},
-            MungedBody1 = 
+            MungedBody1 =
                 maybe_fix_last_expr(MungedBody, Vars3, LastExprBumpLines),
             MungedExprs1 = [MungedExpr|MungedBody1],
 	    munge_body(Body, Vars3, MungedExprs1, NewBumps);
@@ -1859,14 +1853,14 @@ fix_last_expr([MungedExpr|MungedExprs], Line, Vars) ->
     Bump = bump_call(Vars, Line),
     [fix_expr(MungedExpr, Line, Bump)|MungedExprs].
 
-fix_expr({'if',L,Clauses}, Line, Bump) -> 
+fix_expr({'if',L,Clauses}, Line, Bump) ->
     FixedClauses = fix_clauses(Clauses, Line, Bump),
     {'if',L,FixedClauses};
 fix_expr({'case',L,Expr,Clauses}, Line, Bump) ->
     FixedExpr = fix_expr(Expr, Line, Bump),
     FixedClauses = fix_clauses(Clauses, Line, Bump),
     {'case',L,FixedExpr,FixedClauses};
-fix_expr({'receive',L,Clauses}, Line, Bump) -> 
+fix_expr({'receive',L,Clauses}, Line, Bump) ->
     FixedClauses = fix_clauses(Clauses, Line, Bump),
     {'receive',L,FixedClauses};
 fix_expr({'receive',L,Clauses,Expr,Body}, Line, Bump) ->
@@ -2013,20 +2007,20 @@ munge_expr({bc,Line,Expr,Qs}, Vars) ->
 munge_expr({block,Line,Body}, Vars) ->
     {MungedBody, Vars2} = munge_body(Body, Vars),
     {{block,Line,MungedBody}, Vars2};
-munge_expr({'if',Line,Clauses}, Vars) -> 
+munge_expr({'if',Line,Clauses}, Vars) ->
     {MungedClauses,Vars2} = munge_clauses(Clauses, Vars),
     {{'if',Line,MungedClauses}, Vars2};
 munge_expr({'case',Line,Expr,Clauses}, Vars) ->
     {MungedExpr,Vars2} = munge_expr(Expr, Vars),
     {MungedClauses,Vars3} = munge_clauses(Clauses, Vars2),
     {{'case',Line,MungedExpr,MungedClauses}, Vars3};
-munge_expr({'receive',Line,Clauses}, Vars) -> 
+munge_expr({'receive',Line,Clauses}, Vars) ->
     {MungedClauses,Vars2} = munge_clauses(Clauses, Vars),
     {{'receive',Line,MungedClauses}, Vars2};
 munge_expr({'receive',Line,Clauses,Expr,Body}, Vars) ->
     {MungedExpr, Vars1} = munge_expr(Expr, Vars),
     {MungedClauses,Vars2} = munge_clauses(Clauses, Vars1),
-    {MungedBody,Vars3} = 
+    {MungedBody,Vars3} =
         munge_body(Body, Vars2#vars{lines = Vars1#vars.lines}),
     Vars4 = Vars3#vars{lines = Vars2#vars.lines ++ new_bumps(Vars3, Vars2)},
     {{'receive',Line,MungedClauses,MungedExpr,MungedBody}, Vars4};
@@ -2035,7 +2029,7 @@ munge_expr({'try',Line,Body,Clauses,CatchClauses,After}, Vars) ->
     {MungedClauses, Vars2} = munge_clauses(Clauses, Vars1),
     {MungedCatchClauses, Vars3} = munge_clauses(CatchClauses, Vars2),
     {MungedAfter, Vars4} = munge_body(After, Vars3),
-    {{'try',Line,MungedBody,MungedClauses,MungedCatchClauses,MungedAfter}, 
+    {{'try',Line,MungedBody,MungedClauses,MungedCatchClauses,MungedAfter},
      Vars4};
 munge_expr({'fun',Line,{clauses,Clauses}}, Vars) ->
     {MungedClauses,Vars2}=munge_clauses(Clauses, Vars),
@@ -2086,7 +2080,7 @@ munge_qs1(Qs, Line, NQ, Vars, Vars2, MQs) ->
     case new_bumps(Vars2, Vars) of
         [_] ->
             munge_qs(Qs, Vars2, [NQ | MQs]);
-        _ -> 
+        _ ->
             {MungedTrue, Vars3} = munge_expr(?BLOCK({atom,Line,true}), Vars2),
             munge_qs(Qs, Vars3, [NQ, MungedTrue | MQs])
     end.
@@ -2126,7 +2120,7 @@ collect(Modules,Nodes) ->
 collect(Module,Clauses,Nodes) ->
     %% local node
     move_modules({Module,Clauses}),
-    
+
     %% remote nodes
     remote_collect([Module],Nodes,false).
 
@@ -2139,7 +2133,7 @@ move_modules({Module,Clauses}) ->
     MatchSpec = [{Pattern,[],['$_']}],
     Match = ets:select(?COVER_TABLE,MatchSpec,?CHUNK_SIZE),
     do_move_module(Match).
-    
+
 do_move_module({Bumps,Continuation}) ->
     lists:foreach(fun({Key,Val}) ->
 			  ets:insert(?COVER_TABLE, {Key,0}),
@@ -2235,12 +2229,12 @@ do_parallel_analysis(Module, Analysis, Level, Loaded, From, State) ->
     analyse_info(Module,State#main_state.imported),
     C = case Loaded of
 	    {loaded, _File} ->
-		[{Module,Clauses}] = 
+		[{Module,Clauses}] =
 		    ets:lookup(?COVER_CLAUSE_TABLE,Module),
 		collect(Module,Clauses,State#main_state.nodes),
 		Clauses;
 	    _ ->
-		[{Module,Clauses}] = 
+		[{Module,Clauses}] =
 		    ets:lookup(?COLLECTION_CLAUSE_TABLE,Module),
 		Clauses
 	end,
@@ -2376,7 +2370,7 @@ split_ok_error([],Ok,Error) ->
 do_parallel_analysis_to_file(Module, Opts, Loaded, From, State) ->
     File = case Loaded of
 	       {loaded, File0} ->
-		   [{Module,Clauses}] = 
+		   [{Module,Clauses}] =
 		       ets:lookup(?COVER_CLAUSE_TABLE,Module),
 		   collect(Module, Clauses,
 			   State#main_state.nodes),
@@ -2418,7 +2412,7 @@ do_analyse_to_file1(Module, OutFile, ErlFile, HTML) ->
                             ok = file:write(OutFd,H1Bin);
 		       true -> ok
 		    end,
-		    
+
 		    %% Write some initial information to the output file
 		    {{Y,Mo,D},{H,Mi,S}} = calendar:local_time(),
                    Timestamp =
@@ -2450,7 +2444,7 @@ do_analyse_to_file1(Module, OutFile, ErlFile, HTML) ->
                         lists:keysort(1, ets:select(?COLLECTION_TABLE, MS)),
                     CovLines = merge_dup_lines(CovLines0),
 		    print_lines(Module, CovLines, InFd, OutFd, 1, HTML),
-		    
+
 		    if HTML ->
                            ok = file:write(OutFd, close_html());
 		       true -> ok
@@ -2577,7 +2571,7 @@ read_stylesheet() ->
 do_export(Module, OutFile, From, State) ->
     case file:open(OutFile,[write,binary,raw,delayed_write]) of
 	{ok,Fd} ->
-	    Reply = 
+	    Reply =
 		case Module of
 		    '_' ->
 			export_info(State#main_state.imported),
@@ -2589,13 +2583,13 @@ do_export(Module, OutFile, From, State) ->
 			export_info(Module,State#main_state.imported),
 			try is_loaded(Module, State) of
 			    {loaded, File} ->
-				[{Module,Clauses}] = 
+				[{Module,Clauses}] =
 				    ets:lookup(?COVER_CLAUSE_TABLE,Module),
 				collect(Module, Clauses,
 					State#main_state.nodes),
 				do_export_table([{Module,File}],[],Fd);
 			    {imported, File, ImportFiles} ->
-				%% don't know if I should allow this - 
+				%% don't know if I should allow this -
 				%% export a module which is only imported
 				Imported = [{Module,File,ImportFiles}],
 				do_export_table([],Imported,Fd)
@@ -2649,7 +2643,7 @@ write(Element,Fd) ->
 	Size ->
 	    ok = file:write(Fd,<<Size:8,Bin/binary>>)
     end,
-    ok.    
+    ok.
 
 %%%--Import--------------------------------------------------------------
 do_import_to_table(Fd,ImportFile,Imported) ->
@@ -2683,14 +2677,14 @@ do_import_to_table(Fd,ImportFile,Imported,DontImport) ->
 	eof ->
 	    Imported
     end.
-	    
+
 
 get_term(Fd) ->
     case file:read(Fd,1) of
 	{ok,<<Size1:8>>} ->
 	    {ok,Bin1} = file:read(Fd,Size1),
 	    case binary_to_term(Bin1) of
-		{'$size',Size2} -> 
+		{'$size',Size2} ->
 		    {ok,Bin2} = file:read(Fd,Size2),
 		    binary_to_term(Bin2);
 		Term ->
@@ -2728,7 +2722,7 @@ do_reset2({Bumps,Continuation}) ->
 		  Bumps),
     do_reset2(ets:select(Continuation));
 do_reset2('$end_of_table') ->
-    ok.    
+    ok.
 
 do_clear(Module) ->
     ets:match_delete(?COVER_CLAUSE_TABLE, {Module,'_'}),
